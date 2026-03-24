@@ -30,10 +30,6 @@ pipeline {
         stage('Docker Image Create') {
             steps{
                 sh '''
-                echo "PATH=$PATH"
-                which docker
-                docker version
-                hostname
                 docker build -t ${DOCKER_IMAGE_NAME}:${BUILD_NUMBER} .
                 docker tag ${DOCKER_IMAGE_NAME}:${BUILD_NUMBER} hshs99/${DOCKER_IMAGE_NAME}:latest
                 '''

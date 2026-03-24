@@ -27,22 +27,12 @@ pipeline {
                 sh 'mvn clean package -Dmaven.test.failure.ignore=true'
             }
         }
-        stage('Docker Image Create') {
+        stage('Docker Build && Push') {
             steps{
                 sh '''
                 docker build -t ${DOCKER_IMAGE_NAME}:${BUILD_NUMBER} .
                 docker tag ${DOCKER_IMAGE_NAME}:${BUILD_NUMBER} hshs99/${DOCKER_IMAGE_NAME}:latest
-                '''
-            }
-        }
-        stage('Docker Hub Login') {
-            steps{
-                sh 'echo ${DOCKERHUB_CRED_PSW} | docker login -u ${DOCKERHUB_CRED_USR} --password-stdin'
-            }
-        }
-        stage('Docker Image Push') {
-            steps{
-                sh '''
+                echo ${DOCKERHUB_CRED_PSW} | docker login -u ${DOCKERHUB_CRED_USR} --password-stdin
                 docker push hshs99/${DOCKER_IMAGE_NAME}:latest
                 '''
             }
@@ -57,7 +47,26 @@ pipeline {
         }
         stage('Docker Container Run') {
             steps{
-                echo '1'
+                sshPublisher(publishers: [sshPublisherDesc(configName: 'target',
+                transfers: [sshTransfer(cleanRemote: false,
+                excludes: '',
+                execCommand: '''
+                docker rm -f $(docker ps -aq)
+                docker rmi -f $(docker images -q)
+                docker run -itd -p 80:8080 --name spring-petclinic hshs99/spring-petclinic:latest
+                ''',
+                execTimeout: 120000,
+                flatten: false,
+                makeEmptyDirs: false,
+                noDefaultExcludes: false,
+                patternSeparator: '[, ]+',
+                remoteDirectory: '',
+                remoteDirectorySDF: false,
+                removePrefix: 'target',
+                sourceFiles: '')],
+                usePromotionTimestamp: false,
+                useWorkspaceInPromotion: false,
+                verbose: false)])
             }
         }
     }

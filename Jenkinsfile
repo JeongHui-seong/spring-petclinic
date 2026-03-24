@@ -10,7 +10,7 @@ pipeline {
         DOCKER_IMAGE_NAME = 'spring-petclinic'
 
         // Credentials
-        // DOCKERHUB_CRED = credentials('dockerCredentials')
+        DOCKERHUB_CRED = credentials('dockerCredentials')
     }
     
     stages {
@@ -35,12 +35,22 @@ pipeline {
         }
         stage('Docker Hub Login') {
             steps{
-                echo '1'
+                sh 'echo ${DOCKERHUB_CRED_PWS} | docker login -u ${DOCKERHUB_CRED_USR} --password-stdin'
             }
         }
         stage('Docker Image Push') {
             steps{
-                echo '1'
+                sh '''
+                docker push hshs99/${DOCKER_IMAGE_NAME}:latest
+                '''
+            }
+            post {
+                always {
+                    sh '''
+                    docker image rm -f ${DOCKER_IMAGE_NAME}:${BUILD_NUMBER}
+                    docker image rm -f hshs99/${DOCKER_IMAGE_NAME}:latest
+                    '''
+                }
             }
         }
         stage('Docker Container Run') {
